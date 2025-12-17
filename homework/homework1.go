@@ -1,16 +1,12 @@
-package main
+package homework
 
 import (
 	"sort"
 	"strconv"
 )
 
-func main() {
-
-}
-
 // Single Number (只出现一次的数字)
-func singleNumber(nums []int) int {
+func SingleNumber(nums []int) int {
 	// 使用map记录每个数字出现的次数
 	m := make(map[int]int)
 	for _, num := range nums {
@@ -25,7 +21,7 @@ func singleNumber(nums []int) int {
 }
 
 // Is Palindrome (回文数)
-func isPalindrome(x int) bool {
+func IsPalindrome(x int) bool {
 	if x < 0 {
 		return false
 	}
@@ -41,7 +37,7 @@ func isPalindrome(x int) bool {
 }
 
 // Is Valid Parentheses (有效的括号)
-func isValidParentheses(s string) bool {
+func IsValidParentheses(s string) bool {
 	if len(s)%2 != 0 {
 		return false
 	}
@@ -73,7 +69,7 @@ func isValidParentheses(s string) bool {
 }
 
 // Longest Common Prefix (最长公共前缀)
-func longestCommonPrefix(strs []string) string {
+func LongestCommonPrefix(strs []string) string {
 	if len(strs) == 0 {
 		return ""
 	}
@@ -92,7 +88,7 @@ func longestCommonPrefix(strs []string) string {
 }
 
 // Plus One (加一)
-func plusOne(digits []int) []int {
+func PlusOne(digits []int) []int {
 	for i := len(digits) - 1; i >= 0; i-- {
 		if digits[i] < 9 {
 			digits[i]++
@@ -105,7 +101,7 @@ func plusOne(digits []int) []int {
 }
 
 // Remove Duplicates (删除有序数组中的重复项)
-func removeDuplicates(nums []int) int {
+func RemoveDuplicates(nums []int) int {
 	if len(nums) == 0 {
 		return 0
 	}
@@ -122,7 +118,7 @@ func removeDuplicates(nums []int) int {
 }
 
 // Merge Intervals (合并区间)
-func mergeIntervals(intervals [][]int) [][]int {
+func MergeIntervals(intervals [][]int) [][]int {
 	if len(intervals) == 0 {
 		return [][]int{}
 	}
@@ -150,7 +146,7 @@ func maxInt(a, b int) int {
 }
 
 // Two Sum (两数之和)
-func twoSum(nums []int, target int) []int {
+func TwoSum(nums []int, target int) []int {
 	if len(nums) < 2 {
 		return []int{}
 	}
