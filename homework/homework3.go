@@ -15,25 +15,28 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string  `gorm:"not null;comment:'username'"`
-	Nickname string  `gorm:"not null;comment:'nickname'"`
-	Phone    string  `gorm:"not null;unique;comment:'phone'"`
-	Email    *string `gorm:"comment:'email'"`
-	Salt     string  `gorm:"not null;comment:'salt'"`
-	Password string  `gorm:"not null;comment:'password'"`
-	Posts    []Post  `gorm:"foreignKey:UserID;references:ID"`
+	Username     string  `gorm:"not null;comment:'username'"`
+	Nickname     string  `gorm:"not null;comment:'nickname'"`
+	Phone        string  `gorm:"not null;unique;comment:'phone'"`
+	Email        *string `gorm:"comment:'email'"`
+	Salt         string  `gorm:"not null;comment:'salt'"`
+	Password     string  `gorm:"not null;comment:'password'"`
+	Posts        []Post  `gorm:"foreignKey:UserID;references:ID"`
+	PostCount    int64   `gorm:"not null;default:0;comment:'post_count'"`
+	CommentCount int64   `gorm:"not null;default:0;comment:'comment_count'"`
 }
 
 type Post struct {
 	gorm.Model
-	UserID       uint      `gorm:"not null;comment:user_id;index:idx_user_id"`
-	User         User      `gorm:"foreignKey:UserID;references:ID"`
-	Title        string    `gorm:"not null;comment:title"`
-	Content      string    `gorm:"comment:content"`
-	CommentCount int       `gorm:"not null;default:0;comment:'comment_count'"`
-	ForwardCount int       `gorm:"not null;default:0;comment:'forward_count'"`
-	LikeCount    int       `gorm:"not null;default:0;comment:'like_count'"`
-	Comments     []Comment `gorm:"foreignKey:PostID;references:ID"`
+	UserID        uint      `gorm:"not null;comment:user_id;index:idx_user_id"`
+	User          User      `gorm:"foreignKey:UserID;references:ID"`
+	Title         string    `gorm:"not null;comment:title"`
+	Content       string    `gorm:"comment:content"`
+	CommentCount  int       `gorm:"not null;default:0;comment:'comment_count'"`
+	ForwardCount  int       `gorm:"not null;default:0;comment:'forward_count'"`
+	LikeCount     int       `gorm:"not null;default:0;comment:'like_count'"`
+	Comments      []Comment `gorm:"foreignKey:PostID;references:ID"`
+	CommentStatus int       `gorm:"not null;default:'0';comment:'comment_status: 0-无评论 1-有评论'"`
 }
 
 type Comment struct {
@@ -50,8 +53,7 @@ type Comment struct {
 
 // Task 2
 // 使用Gorm查询某个用户发布的所有文章及其对应的评论信息。
-// 编写Go代码，使用Gorm查询评论数量最多的文章信息
-func SearchMostCommentedPost(db *gorm.DB, userId uint) []Post {
+func SearchPostAndCommented(db *gorm.DB, userId uint) []Post {
 	var posts []Post
 	db.Model(&Post{}).Where("user_id = ?", userId).Preload("Comments").Find(&posts)
 
@@ -66,6 +68,34 @@ func SearchMostCommentedPost(db *gorm.DB, userId uint) []Post {
 	}
 
 	return posts
+}
+
+// 编写Go代码，使用Gorm查询评论数量最多的文章信息
+func SearchMostCommentedPost(db *gorm.DB) []Post {
+	var posts []Post
+	db.Model(&Post{}).Order("comment_count DESC").First(&posts)
+	return posts
+}
+
+// Task 3
+// 为 Post 模型添加一个钩子函数，在文章创建时自动更新用户的文章数量统计字段。
+func (post *Post) BeforeCreate(tx *gorm.DB) (err error) {
+	count := int64(0)
+	// 查询该用户的文章数量
+	tx.Model(&Post{}).Where("user_id = ?", post.UserID).Count(&count)
+	// 更新用户的文章数量统计字段
+	tx.Model(&User{}).Where("id = ?", post.UserID).Update("post_count", count)
+	return
+}
+
+// 为 Comment 模型添加一个钩子函数，在评论删除时检查文章的评论数量，如果评论数量为 0，则更新文章的评论状态为 "无评论"。
+func (comment *Comment) BeforeDelete(tx *gorm.DB) (err error) {
+	count := int64(0)
+	// 查询该文章的评论数量
+	tx.Model(&Comment{}).Where("post_id = ?", comment.PostID).Count(&count)
+	// 更新文章的评论状态
+	tx.Model(&Post{}).Where("id = ?", comment.PostID).Update("comment_status", count == 0)
+	return
 }
 
 func Run1() {
@@ -141,5 +171,9 @@ func Run1() {
 
 	// fmt.Println(result3.RowsAffected)
 
-	SearchMostCommentedPost(db, 1)
+	// result := SearchPostAndCommented(db, 1)
+	// fmt.Println(result)
+
+	// result2 := SearchMostCommentedPost(db)
+	// fmt.Println(result2)
 }
