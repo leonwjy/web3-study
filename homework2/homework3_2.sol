@@ -43,6 +43,7 @@ contract UserManager {
     function deposit(uint amount) public {
         User storage user = users[msg.sender];
         require(user.exists, unicode"用户未注册");
+        require(amount > 0, unicode"存款金额不能为0");
         user.balance += amount;
     }
 
