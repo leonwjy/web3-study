@@ -57,7 +57,7 @@ contract Crowdfunding {
     address public owner;
 
     // 最小支持金额
-    uint256 public MIN_SUPPORT_AMOUNT = 0.01 ether;
+    uint256 public constant MIN_SUPPORT_AMOUNT = 0.01 ether;
 
     // 批量退款大小
     uint256 private constant BATCH_SIZE = 10;
