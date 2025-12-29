@@ -50,8 +50,8 @@ contract RoleMananger {
         _;
     }
 
-    // 用户注册
-    function registerUser(string calldata name, string calldata email) public returns(uint256) {
+    // 管理员注册用户
+    function registerUser(string calldata name, string calldata email) public onlyAdmin returns(uint256) {
         require(bytes(name).length > 0, "name required");
         require(userCount < MAX_USERS, "max users reached");
         
@@ -67,17 +67,24 @@ contract RoleMananger {
         return userId;
     }
 
-    // 设置权限
-    function setAdminRole(uint256 userId) public onlyOwner {
-        require(userId <= userCount, "user not found");
-        require(users[userId].role != Role.Admin, "user already has admin role");
-        User storage user = users[userId];
-        user.role = Role.Admin;
-        roles[user.addr] = Role.Admin;
+    // 创建人注册管理员
+    function registerAdmin(string calldata name, string calldata email) public onlyOwner returns(uint256) {
+        require(bytes(name).length > 0, "name required");
+        require(userCount < MAX_USERS, "max users reached");
+        uint256 userId = userCount++;
+        users[userId] = User({
+            name: name,
+            email: email,
+            balance: 0 ether,
+            addr: msg.sender,
+            role: Role.Admin
+        });
+        roles[msg.sender] = Role.Admin;
+        return userId;
     }
 
     // 存款
-    function deposit(uint256 userId) public payable {
+    function deposit(uint256 userId) public onlyOwner payable {
         require(userId <= userCount, "user not found");
         require(msg.value > 0 ether, "amount must be greater than 0");
         User storage user = users[userId];
