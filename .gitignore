@@ -4,3 +4,4 @@ package-lock.json
 /cache
 /.vscode
 .solhint.json
+/artifacts
