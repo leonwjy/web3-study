@@ -5,3 +5,7 @@ package-lock.json
 /.vscode
 .solhint.json
 /artifacts
+/hardhat-project/node_modules
+/hardhat-project/artifacts
+hardhat-project/.env
+/hardhat-project/ignition/deployments
