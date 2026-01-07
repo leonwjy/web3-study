@@ -9,3 +9,7 @@ package-lock.json
 /hardhat-project/artifacts
 hardhat-project/.env
 /hardhat-project/ignition/deployments
+/hardhat-auction/.deps
+/hardhat-auction/artifacts
+/hardhat-auction/cache
+/hardhat-auction/node_modules
