@@ -38,7 +38,7 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
     mapping(uint256 => AuctionInfo) public auctions;
     
     // 拍卖 ID 计数器
-    uint256 private _auctionIdCounter;
+    uint256 internal _auctionIdCounter;
     
     // 用户出价记录：auctionId => bidder => bidAmount (USD, 18 decimals)
     mapping(uint256 => mapping(address => uint256)) public bids;
@@ -103,7 +103,7 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
         uint256 startingPriceUSD,
         uint256 duration,
         address paymentToken
-    ) external nonReentrant {
+    ) public virtual nonReentrant {
         require(nftContract != address(0), "Invalid NFT contract");
         require(duration > 0, "Duration must be greater than 0");
         require(startingPriceUSD > 0, "Starting price must be greater than 0");

@@ -1,126 +1,104 @@
-const hre = require("hardhat");
-const fs = require("fs");
-const path = require("path");
+const { ethers, upgrades } = require("hardhat");
 
-async function main() {
-  const [deployer] = await hre.ethers.getSigners();
-  console.log("Deploying contracts with account:", deployer.address);
-  console.log("Account balance:", (await hre.ethers.provider.getBalance(deployer.address)).toString());
+module.exports = async function ({ getNamedAccounts, deployments }) {
+  const { deploy, save } = deployments;
+  const { deployer } = await getNamedAccounts();
+
+  console.log("部署用户地址:", deployer);
 
   // 获取 Chainlink 价格源地址
-  const networkName = hre.network.name;
-  const ethUsdPriceFeed = hre.config.chainlink?.ethUsdPriceFeed?.[networkName] || 
-                         "0x694AA1769357215DE4FAC081bf1f309aDC325306"; // Sepolia default
+  const networkName = await ethers.provider.getNetwork().then(n => n.name);
+  const ethUsdPriceFeed = networkName === "sepolia"
+    ? "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+    : "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"; // Mainnet
 
-  console.log("\n=== Deploying MyNFT ===");
-  const MyNFT = await hre.ethers.getContractFactory("MyNFT");
-  const myNFT = await MyNFT.deploy("MyNFT", "MNFT");
-  await myNFT.waitForDeployment();
-  const myNFTAddress = await myNFT.getAddress();
-  console.log("MyNFT deployed to:", myNFTAddress);
+  // 部署基础合约
+  console.log("\n=== 部署 MyNFT ===");
+  const myNFT = await deploy("MyNFT", {
+    from: deployer,
+    args: ["MyNFT", "MNFT"],
+    log: true,
+  });
 
-  console.log("\n=== Deploying PriceOracle ===");
-  const PriceOracle = await hre.ethers.getContractFactory("PriceOracle");
-  const priceOracle = await PriceOracle.deploy(ethUsdPriceFeed);
-  await priceOracle.waitForDeployment();
-  const priceOracleAddress = await priceOracle.getAddress();
-  console.log("PriceOracle deployed to:", priceOracleAddress);
-  console.log("ETH/USD Price Feed:", ethUsdPriceFeed);
+  console.log("\n=== 部署 PriceOracle ===");
+  const priceOracle = await deploy("PriceOracle", {
+    from: deployer,
+    args: [ethUsdPriceFeed],
+    log: true,
+  });
 
-  console.log("\n=== Deploying AuctionUUPS Implementation ===");
-  const AuctionUUPS = await hre.ethers.getContractFactory("AuctionUUPS");
-  const auctionUUPSImpl = await AuctionUUPS.deploy();
-  await auctionUUPSImpl.waitForDeployment();
-  const auctionUUPSImplAddress = await auctionUUPSImpl.getAddress();
-  console.log("AuctionUUPS Implementation deployed to:", auctionUUPSImplAddress);
+  console.log("\n=== 部署 MockERC20 ===");
+  const mockERC20 = await deploy("MockERC20", {
+    from: deployer,
+    args: ["TestToken", "TEST", 18],
+    log: true,
+  });
 
-  console.log("\n=== Deploying AuctionUUPS Proxy ===");
-  const ERC1967ProxyArtifact = require("@openzeppelin/contracts/build/contracts/ERC1967Proxy.json");
-  const ERC1967Proxy = await hre.ethers.getContractFactoryFromArtifact(ERC1967ProxyArtifact);
-  const auctionUUPSInitData = AuctionUUPS.interface.encodeFunctionData("initialize", [
-    priceOracleAddress
-  ]);
-  const auctionUUPSProxy = await ERC1967Proxy.deploy(auctionUUPSImplAddress, auctionUUPSInitData);
-  await auctionUUPSProxy.waitForDeployment();
-  const auctionUUPSProxyAddress = await auctionUUPSProxy.getAddress();
-  console.log("AuctionUUPS Proxy deployed to:", auctionUUPSProxyAddress);
+  // 设置代币价格源
+  const priceOracleContract = await ethers.getContractAt("PriceOracle", priceOracle.address);
+  await priceOracleContract.setTokenPriceFeed(mockERC20.address, ethUsdPriceFeed);
 
-  // 获取代理合约实例并验证初始化
-  const auctionUUPS = AuctionUUPS.attach(auctionUUPSProxyAddress);
-  console.log("AuctionUUPS Owner:", await auctionUUPS.owner());
-  console.log("AuctionUUPS Version:", await auctionUUPS.version());
+  console.log("\n=== 部署 AuctionTransparent (透明代理) ===");
+  const AuctionTransparent = await ethers.getContractFactory("AuctionTransparent");
+  const auctionTransparent = await upgrades.deployProxy(AuctionTransparent, [priceOracle.address], {
+    initializer: "initialize",
+    kind: "transparent",
+  });
+  await auctionTransparent.waitForDeployment();
 
-  console.log("\n=== Deploying AuctionTransparent Implementation ===");
-  const AuctionTransparent = await hre.ethers.getContractFactory("AuctionTransparent");
-  const auctionTransparentImpl = await AuctionTransparent.deploy();
-  await auctionTransparentImpl.waitForDeployment();
-  const auctionTransparentImplAddress = await auctionTransparentImpl.getAddress();
-  console.log("AuctionTransparent Implementation deployed to:", auctionTransparentImplAddress);
+  // 保存部署信息
+  await save("AuctionTransparent", {
+    abi: AuctionTransparent.interface.format(),
+    address: await auctionTransparent.getAddress(),
+  });
 
-  console.log("\n=== Deploying ProxyAdmin ===");
-  const ProxyAdminArtifact = require("@openzeppelin/contracts/build/contracts/ProxyAdmin.json");
-  const ProxyAdmin = await hre.ethers.getContractFactoryFromArtifact(ProxyAdminArtifact);
-  const proxyAdmin = await ProxyAdmin.deploy(deployer.address);
-  await proxyAdmin.waitForDeployment();
-  const proxyAdminAddress = await proxyAdmin.getAddress();
-  console.log("ProxyAdmin deployed to:", proxyAdminAddress);
+  console.log("\n=== 部署 AuctionUUPS (UUPS代理) ===");
+  const AuctionUUPS = await ethers.getContractFactory("AuctionUUPS");
+  const auctionUUPS = await upgrades.deployProxy(AuctionUUPS, [priceOracle.address], {
+    initializer: "initialize",
+    kind: "uups",
+  });
+  await auctionUUPS.waitForDeployment();
 
-  console.log("\n=== Deploying AuctionTransparent Proxy ===");
-  const TransparentUpgradeableProxyArtifact = require("@openzeppelin/contracts/build/contracts/TransparentUpgradeableProxy.json");
-  const TransparentUpgradeableProxy = await hre.ethers.getContractFactoryFromArtifact(TransparentUpgradeableProxyArtifact);
-  const auctionTransparentInitData = AuctionTransparent.interface.encodeFunctionData("initialize", [
-    priceOracleAddress
-  ]);
-  const auctionTransparentProxy = await TransparentUpgradeableProxy.deploy(
-    auctionTransparentImplAddress,
-    proxyAdminAddress,
-    auctionTransparentInitData
-  );
-  await auctionTransparentProxy.waitForDeployment();
-  const auctionTransparentProxyAddress = await auctionTransparentProxy.getAddress();
-  console.log("AuctionTransparent Proxy deployed to:", auctionTransparentProxyAddress);
+  // 保存部署信息
+  await save("AuctionUUPS", {
+    abi: AuctionUUPS.interface.format(),
+    address: await auctionUUPS.getAddress(),
+  });
 
-  // 获取代理合约实例并验证初始化
-  const auctionTransparent = AuctionTransparent.attach(auctionTransparentProxyAddress);
-  console.log("AuctionTransparent Owner:", await auctionTransparent.owner());
-  console.log("AuctionTransparent Version:", await auctionTransparent.version());
+  console.log("\n=== 部署总结 ===");
+  console.log("MyNFT:", myNFT.address);
+  console.log("PriceOracle:", priceOracle.address);
+  console.log("MockERC20:", mockERC20.address);
+  console.log("AuctionTransparent Proxy:", await auctionTransparent.getAddress());
+  console.log("AuctionUUPS Proxy:", await auctionUUPS.getAddress());
 
-  // 保存部署地址
-  const deploymentInfo = {
+  // 保存代理地址到文件（用于升级脚本）
+  const fs = require("fs");
+  const path = require("path");
+
+  const proxyData = {
     network: networkName,
-    deployer: deployer.address,
-    contracts: {
-      MyNFT: myNFTAddress,
-      PriceOracle: priceOracleAddress,
-      AuctionUUPS: {
-        implementation: auctionUUPSImplAddress,
-        proxy: auctionUUPSProxyAddress,
-      },
-      AuctionTransparent: {
-        implementation: auctionTransparentImplAddress,
-        proxy: auctionTransparentProxyAddress,
-        proxyAdmin: proxyAdminAddress,
-      },
-    },
-    chainlink: {
-      ethUsdPriceFeed: ethUsdPriceFeed,
+    deployer,
+    proxies: {
+      AuctionTransparent: await auctionTransparent.getAddress(),
+      AuctionUUPS: await auctionUUPS.getAddress(),
     },
     timestamp: new Date().toISOString(),
   };
 
-  const deploymentPath = path.join(__dirname, "..", "deployments", `${networkName}.json`);
-  fs.mkdirSync(path.dirname(deploymentPath), { recursive: true });
-  fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
-  console.log("\n=== Deployment info saved to:", deploymentPath);
+  const cacheDir = path.join(__dirname, "..", ".cache");
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
 
-  console.log("\n=== Deployment Summary ===");
-  console.log(JSON.stringify(deploymentInfo, null, 2));
+  fs.writeFileSync(
+    path.join(cacheDir, "proxies.json"),
+    JSON.stringify(proxyData, null, 2)
+  );
+
+  console.log("代理地址已保存到 .cache/proxies.json");
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+module.exports.tags = ["deploy"];
 

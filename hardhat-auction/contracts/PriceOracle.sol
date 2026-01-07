@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title PriceOracle
@@ -144,10 +145,5 @@ contract PriceOracle {
             }
         }
     }
-}
-
-// ERC20 元数据接口，用于获取代币精度
-interface IERC20Metadata {
-    function decimals() external view returns (uint8);
 }
 

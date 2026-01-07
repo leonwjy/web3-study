@@ -16,7 +16,10 @@
 ### 1.1 创建新项目
 1. 打开 [Remix IDE](https://remix.ethereum.org/)
 2. 点击 "Create New File" 创建新项目
-3. 在项目根目录创建以下文件夹结构：
+3. **安装必要插件：**
+   - 点击左侧插件图标，搜索并安装 "OpenZeppelin Contracts"
+   - 这样就可以直接使用 import 语句导入 OZ 合约
+4. 在项目根目录创建以下文件夹结构：
 ```
 auction-project/
 ├── contracts/
@@ -32,7 +35,37 @@ auction-project/
 
 ### 1.2 复制合约代码
 
-**注意：** 由于 Remix 不支持相对导入路径，你需要手动修改所有导入语句。
+**两种方式：**
+
+#### 方式一：使用 OpenZeppelin 插件 + Import 语句（推荐）
+
+**你的合约已经是这种格式了！** 🎉
+
+安装 OpenZeppelin 插件后，你可以直接复制现有的 Hardhat 合约代码，无需任何修改：
+
+```solidity
+// 你的 Auction.sol - 已经是最佳实践格式
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./PriceOracle.sol";
+
+contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721Receiver {
+    // ... 你的完整代码
+}
+```
+
+**优势：**
+- ✅ 代码与 Hardhat 项目完全一致
+- ✅ 无需手动处理依赖
+- ✅ 自动获得最新版本的合约
+- ✅ Remix 会自动解析所有 import
+
+#### 方式二：手动复制代码（备用方案）
+如果插件不可用，可以手动复制所有依赖合约代码到项目中。
 
 #### 1.2.1 复制基础合约
 
@@ -256,6 +289,8 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
 3. 搜索并安装 "Chainlink" 插件（如果有的话）
 
 ### 2.2 编译设置
+
+**使用 OpenZeppelin 插件时：**
 1. 选择 Solidity 编译器版本：`0.8.28`
 2. **重要：设置 EVM 版本为 Cancun**
    - 在 Remix 的 Solidity 编译器面板中
@@ -263,7 +298,12 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - 找到 "EVM Version" 选项
    - 从下拉菜单中选择 "cancun"
 3. 启用优化：200 runs
-4. 编译所有合约，按以下顺序：
+4. **直接编译你的合约文件**
+   - Remix 会自动解析 @openzeppelin 和 @chainlink 的 import
+   - 无需手动编译依赖合约
+
+**如果不使用插件（手动复制方式）：**
+1. 编译所有合约，按以下顺序：
    1. `MockChainlinkAggregator.sol`
    2. `MockERC20.sol`
    3. `MyNFT.sol`
@@ -489,7 +529,39 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
 - **账户 3（买家）**：参与出价
 - **在每个测试步骤前确认使用正确的账户！**
 
-### 4.1 基础功能测试
+### 4.1 Hardhat 部署和升级流程
+
+**完整的开发和测试流程：**
+
+1. **合约开发：**
+   - 编写基础合约（Auction.sol）
+   - 创建升级版本（AuctionV2.sol）
+
+2. **部署测试：**
+   ```bash
+   # 部署所有合约
+   npx hardhat deploy --tags deploy
+
+   # 升级到新版本
+   npx hardhat deploy --tags upgrade
+   ```
+
+3. **功能测试：**
+   ```bash
+   # 运行所有测试
+   npx hardhat test
+
+   # 只运行升级测试
+   npx hardhat test --grep "合约升级测试"
+   ```
+
+4. **审计验证：**
+   - 状态变量兼容性
+   - 函数签名保持
+   - 权限控制完整
+   - 升级安全性
+
+### 4.2 基础功能测试
 
 #### 测试 1：创建 ETH 拍卖
 1. **准备工作：**
@@ -564,7 +636,7 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - ETH 被退回到 bidder1 账户
    - 事件 `BidWithdrawn` 被触发
 
-### 4.2 ERC20 出价测试
+### 4.3 ERC20 出价测试
 
 #### 测试 5：创建 ERC20 拍卖
 1. **创建新拍卖：**
@@ -584,7 +656,7 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - 代币从 bidder1 转移到拍卖合约
    - 事件 `BidPlaced` 被触发
 
-### 4.3 拍卖结束测试
+### 4.4 拍卖结束测试
 
 #### 测试 7：时间结束后结束拍卖
 1. **等待拍卖结束或加速时间**
@@ -607,28 +679,39 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - 拍卖立即结束
    - NFT 退还给卖家
 
-### 4.4 代理合约测试
+### 4.5 Hardhat Upgrades 测试
 
-#### 测试 9：透明代理升级测试
-1. **部署 AuctionTransparent**
-   - 部署实现合约
-   - 部署 ProxyAdmin
-   - 部署 TransparentUpgradeableProxy
+#### 完整的升级测试流程
 
-2. **升级测试：**
-   - 调用 `auction.updateVersion()` 确认当前版本
-   - 部署新版本的实现合约
-   - 通过 ProxyAdmin 升级代理
-   - 再次调用确认版本更新
+1. **初始部署：**
+   ```bash
+   npx hardhat deploy --tags deploy
+   ```
 
-#### 测试 10：UUPS 代理升级测试
-1. **部署 AuctionUUPS**
-   - 部署实现合约
-   - 部署 ERC1967Proxy
+2. **运行升级脚本：**
+   ```bash
+   npx hardhat deploy --tags upgrade
+   ```
 
-2. **升级测试：**
-   - 类似透明代理的升级流程
-   - 直接通过代理合约调用升级函数
+3. **运行升级测试：**
+   ```bash
+   npx hardhat test test/Upgrade.test.js
+   ```
+
+#### 测试覆盖
+
+- ✅ 透明代理部署和升级 (`upgrades.deployProxy` / `upgrades.upgradeProxy`)
+- ✅ UUPS 代理部署和升级
+- ✅ 状态保持性验证
+- ✅ 新功能测试（暂停、批量操作）
+- ✅ 权限控制验证
+- ✅ 升级安全性检查
+
+#### 升级脚本说明
+
+**deploy.js**: 使用 `upgrades.deployProxy()` 部署透明代理和 UUPS 代理
+**upgrade.js**: 使用 `upgrades.upgradeProxy()` 执行合约升级
+**缓存文件**: `.cache/proxies.json` 保存代理地址信息
 
 ## 第五步：错误情况测试
 

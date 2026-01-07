@@ -1,113 +1,92 @@
-const hre = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 const fs = require("fs");
 const path = require("path");
 
-async function main() {
-  const [deployer] = await hre.ethers.getSigners();
-  const networkName = hre.network.name;
+module.exports = async function ({ getNamedAccounts, deployments }) {
+  const { save } = deployments;
+  const { deployer } = await getNamedAccounts();
 
-  // 读取部署信息
-  const deploymentPath = path.join(__dirname, "..", "deployments", `${networkName}.json`);
-  if (!fs.existsSync(deploymentPath)) {
-    throw new Error(`Deployment file not found: ${deploymentPath}`);
+  console.log("升级用户地址:", deployer);
+
+  // 读取代理地址
+  const cachePath = path.join(__dirname, "..", ".cache", "proxies.json");
+  if (!fs.existsSync(cachePath)) {
+    throw new Error("未找到代理地址文件，请先运行部署脚本");
   }
 
-  const deploymentInfo = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
-  console.log("Deployment info loaded from:", deploymentPath);
+  const proxyData = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
+  const auctionTransparentAddress = proxyData.proxies.AuctionTransparent;
+  const auctionUUPSAddress = proxyData.proxies.AuctionUUPS;
 
-  const upgradeType = process.env.UPGRADE_TYPE || "uups"; // "uups" or "transparent"
-  console.log(`\n=== Upgrading ${upgradeType.toUpperCase()} Proxy ===`);
+  console.log("\n=== 升级 AuctionTransparent 到 V2 ===");
+  const AuctionV2 = await ethers.getContractFactory("AuctionV2");
 
-  if (upgradeType === "uups") {
-    // UUPS 升级
-    const proxyAddress = deploymentInfo.contracts.AuctionUUPS.proxy;
-    console.log("Proxy address:", proxyAddress);
-
-    // 部署新版本实现合约
-    console.log("\nDeploying new implementation...");
-    const AuctionUUPS = await hre.ethers.getContractFactory("AuctionUUPS");
-    const newImpl = await AuctionUUPS.deploy();
-    await newImpl.waitForDeployment();
-    const newImplAddress = await newImpl.getAddress();
-    console.log("New implementation deployed to:", newImplAddress);
-
-    // 获取代理合约实例
-    const proxy = AuctionUUPS.attach(proxyAddress);
-    const oldVersion = await proxy.version();
-    console.log("Current version:", oldVersion.toString());
-
-    // 执行升级
-    console.log("\nUpgrading proxy...");
-    const tx = await proxy.upgradeToAndCall(newImplAddress, "0x");
-    await tx.wait();
-    console.log("Upgrade transaction:", tx.hash);
-
-    // 验证升级
-    const newVersion = await proxy.version();
-    console.log("New version:", newVersion.toString());
-
-    // 更新部署信息
-    deploymentInfo.contracts.AuctionUUPS.implementation = newImplAddress;
-    deploymentInfo.contracts.AuctionUUPS.lastUpgrade = {
-      timestamp: new Date().toISOString(),
-      newImplementation: newImplAddress,
-      transactionHash: tx.hash,
-    };
-
-  } else if (upgradeType === "transparent") {
-    // 透明代理升级
-    const proxyAddress = deploymentInfo.contracts.AuctionTransparent.proxy;
-    const proxyAdminAddress = deploymentInfo.contracts.AuctionTransparent.proxyAdmin;
-    console.log("Proxy address:", proxyAddress);
-    console.log("ProxyAdmin address:", proxyAdminAddress);
-
-    // 部署新版本实现合约
-    console.log("\nDeploying new implementation...");
-    const AuctionTransparent = await hre.ethers.getContractFactory("AuctionTransparent");
-    const newImpl = await AuctionTransparent.deploy();
-    await newImpl.waitForDeployment();
-    const newImplAddress = await newImpl.getAddress();
-    console.log("New implementation deployed to:", newImplAddress);
-
-    // 获取 ProxyAdmin 实例
-    const ProxyAdmin = await hre.ethers.getContractFactory("ProxyAdmin");
-    const proxyAdmin = ProxyAdmin.attach(proxyAdminAddress);
-
-    // 获取代理合约实例以检查当前版本
-    const proxy = AuctionTransparent.attach(proxyAddress);
-    const oldVersion = await proxy.version();
-    console.log("Current version:", oldVersion.toString());
-
-    // 执行升级
-    console.log("\nUpgrading proxy via ProxyAdmin...");
-    const tx = await proxyAdmin.upgrade(proxyAddress, newImplAddress);
-    await tx.wait();
-    console.log("Upgrade transaction:", tx.hash);
-
-    // 验证升级
-    const newVersion = await proxy.version();
-    console.log("New version:", newVersion.toString());
-
-    // 更新部署信息
-    deploymentInfo.contracts.AuctionTransparent.implementation = newImplAddress;
-    deploymentInfo.contracts.AuctionTransparent.lastUpgrade = {
-      timestamp: new Date().toISOString(),
-      newImplementation: newImplAddress,
-      transactionHash: tx.hash,
-    };
-  } else {
-    throw new Error("Invalid UPGRADE_TYPE. Use 'uups' or 'transparent'");
-  }
-
-  // 保存更新的部署信息
-  fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
-  console.log("\n=== Deployment info updated ===");
-}
-
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
+  // 升级透明代理
+  const auctionTransparentV2 = await upgrades.upgradeProxy(auctionTransparentAddress, AuctionV2, {
+    call: { fn: "initializeV2" },
+    kind: "transparent",
   });
 
+  await auctionTransparentV2.waitForDeployment();
+  const transparentAddress = await auctionTransparentV2.getAddress();
+
+  console.log("AuctionTransparent 升级完成:", transparentAddress);
+
+  console.log("\n=== 升级 AuctionUUPS 到 V2 ===");
+
+  // 升级 UUPS 代理
+  const auctionUUPSV2 = await upgrades.upgradeProxy(auctionUUPSAddress, AuctionV2, {
+    call: { fn: "initializeV2" },
+    kind: "uups",
+  });
+
+  await auctionUUPSV2.waitForDeployment();
+  const uupsAddress = await auctionUUPSV2.getAddress();
+
+  console.log("AuctionUUPS 升级完成:", uupsAddress);
+
+  // 保存升级后的合约信息
+  await save("AuctionTransparentV2", {
+    abi: AuctionV2.interface.format(),
+    address: transparentAddress,
+  });
+
+  await save("AuctionUUPSV2", {
+    abi: AuctionV2.interface.format(),
+    address: uupsAddress,
+  });
+
+  console.log("\n=== 升级总结 ===");
+  console.log("AuctionTransparent V2:", transparentAddress);
+  console.log("AuctionUUPS V2:", uupsAddress);
+
+  // 验证升级
+  console.log("\n=== 验证升级 ===");
+
+  const transparentVersion = await auctionTransparentV2.getVersion();
+  const uupsVersion = await auctionUUPSV2.getVersion();
+
+  console.log("AuctionTransparent 版本:", transparentVersion);
+  console.log("AuctionUUPS 版本:", uupsVersion);
+
+  // 测试新功能
+  const stats = await auctionTransparentV2.getAuctionStats();
+  console.log("新功能测试 - 统计信息:", stats);
+
+  // 测试暂停功能
+  await auctionTransparentV2.pause();
+  const isPaused = await auctionTransparentV2.paused();
+  console.log("暂停功能测试:", isPaused ? "成功" : "失败");
+
+  // 更新缓存文件
+  proxyData.upgraded = {
+    AuctionTransparentV2: transparentAddress,
+    AuctionUUPSV2: uupsAddress,
+  };
+  proxyData.upgradedAt = new Date().toISOString();
+
+  fs.writeFileSync(cachePath, JSON.stringify(proxyData, null, 2));
+  console.log("升级信息已保存到 .cache/proxies.json");
+}
+
+module.exports.tags = ["upgrade"];
