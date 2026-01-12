@@ -9,7 +9,7 @@ import "./Auction.sol";
  * 注意：这个版本移除了 _disableInitializers() 以便在 Remix 中正常工作
  */
 contract AuctionTransparent is Auction {
-
+    
     /**
      * @dev 初始化函数（用于可升级合约）
      * @param _priceOracle 价格预言机合约地址
@@ -25,7 +25,7 @@ contract AuctionTransparent is Auction {
     function version() external pure returns (uint256) {
         return 1;
     }
-
+    
     /**
      * @dev 测试升级功能 - 新增功能
      */

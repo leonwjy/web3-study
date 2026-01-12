@@ -3,6 +3,7 @@ package-lock.json
 /out
 /cache
 /.vscode
+/.cursor
 .solhint.json
 /artifacts
 /hardhat-project/node_modules
