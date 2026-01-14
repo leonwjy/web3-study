@@ -1,0 +1,554 @@
+basePath: /
+definitions:
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+    type: object
+  vo.AuctionListVO:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/vo.AuctionVO'
+        type: array
+      total:
+        type: integer
+    type: object
+  vo.AuctionVO:
+    properties:
+      created_at:
+        type: string
+      current_highest_bid:
+        type: string
+      end_time:
+        type: integer
+      highest_bidder:
+        type: string
+      id:
+        type: integer
+      nft:
+        allOf:
+        - $ref: '#/definitions/vo.NFTVO'
+        description: 关联数据（可选）
+      nft_contract:
+        type: string
+      payment_token:
+        type: string
+      seller:
+        type: string
+      start_time:
+        type: integer
+      starting_price:
+        type: string
+      status:
+        type: string
+      token_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  vo.BidListVO:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/vo.BidVO'
+        type: array
+      total:
+        type: integer
+    type: object
+  vo.BidVO:
+    properties:
+      auction_id:
+        type: integer
+      bid_amount_usd:
+        type: string
+      bidder:
+        type: string
+      block_number:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      log_index:
+        type: integer
+      original_amount:
+        type: string
+      payment_token:
+        type: string
+      tx_hash:
+        type: string
+    type: object
+  vo.NFTListVO:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/vo.NFTVO'
+        type: array
+      total:
+        type: integer
+    type: object
+  vo.NFTVO:
+    properties:
+      contract_address:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      name:
+        type: string
+      owner:
+        type: string
+      token_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: NFT 拍卖系统后端 API 文档
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: NFT Auction API
+  version: "1.0"
+paths:
+  /api/v1/auctions:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取拍卖列表，支持状态、卖家、NFT合约过滤
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 拍卖状态
+        enum:
+        - active
+        - ended
+        - cancelled
+        in: query
+        name: status
+        type: string
+      - description: 卖家地址
+        in: query
+        name: seller
+        type: string
+      - description: NFT合约地址
+        in: query
+        name: nft_contract
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.AuctionListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取拍卖列表
+      tags:
+      - 拍卖
+  /api/v1/auctions/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取拍卖详细信息
+      parameters:
+      - description: 拍卖ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.AuctionVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 拍卖不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取拍卖详情
+      tags:
+      - 拍卖
+  /api/v1/auctions/active:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有活跃状态的拍卖列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.AuctionListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取活跃拍卖列表
+      tags:
+      - 拍卖
+  /api/v1/auctions/ended:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有已结束状态的拍卖列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.AuctionListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取已结束拍卖列表
+      tags:
+      - 拍卖
+  /api/v1/auctions/seller/{seller}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定卖家的所有拍卖列表
+      parameters:
+      - description: 卖家地址
+        in: path
+        name: seller
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.AuctionListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取卖家的拍卖列表
+      tags:
+      - 拍卖
+  /api/v1/bids/auction/{auction_id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定拍卖的所有出价记录
+      parameters:
+      - description: 拍卖ID
+        in: path
+        name: auction_id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.BidListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 拍卖不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取拍卖的出价列表
+      tags:
+      - 出价
+  /api/v1/bids/bidder/{bidder}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定出价者的所有出价记录
+      parameters:
+      - description: 出价者地址
+        in: path
+        name: bidder
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.BidListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取出价者的出价历史
+      tags:
+      - 出价
+  /api/v1/bids/highest/{auction_id}:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定拍卖的最高出价记录
+      parameters:
+      - description: 拍卖ID
+        in: path
+        name: auction_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.BidVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 拍卖不存在或没有出价记录
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取拍卖的最高出价
+      tags:
+      - 出价
+  /api/v1/nfts:
+    get:
+      consumes:
+      - application/json
+      description: 获取指定所有者的所有NFT列表
+      parameters:
+      - description: 所有者地址
+        in: query
+        name: owner
+        required: true
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.NFTListVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取所有者的NFT列表
+      tags:
+      - NFT
+  /api/v1/nfts/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取NFT详细信息
+      parameters:
+      - description: NFT ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.NFTVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: NFT不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取NFT详情
+      tags:
+      - NFT
+  /api/v1/nfts/by-contract:
+    get:
+      consumes:
+      - application/json
+      description: 根据合约地址和TokenID获取NFT信息
+      parameters:
+      - description: 合约地址
+        in: query
+        name: contract_address
+        required: true
+        type: string
+      - description: Token ID
+        in: query
+        name: token_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/vo.NFTVO'
+              type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: NFT不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 根据合约和TokenID获取NFT
+      tags:
+      - NFT
+swagger: "2.0"
