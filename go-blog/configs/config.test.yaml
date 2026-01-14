@@ -1,0 +1,22 @@
+# 测试环境配置
+server:
+  port: 8080
+  mode: test
+
+database:
+  host: test-db-host
+  port: 3306
+  username: test_user
+  password: test_password
+  dbname: go_blog_test
+  max_idle_conns: 10
+  max_open_conns: 50
+
+jwt:
+  secret: test-jwt-secret-key-for-testing
+  expire_time: 24  # 小时
+  issuer: go_blog
+
+log:
+  level: info
+

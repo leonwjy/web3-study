@@ -1,0 +1,36 @@
+# 测试环境配置
+server:
+  port: 8080
+  mode: test
+
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  dbname: auction_db_test
+  max_idle_conns: 10
+  max_open_conns: 50
+
+redis:
+  host: localhost
+  port: 6380  # Docker Redis 端口
+  password: ""
+  db: 1
+
+blockchain:
+  rpc_url: "https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}"
+  ws_url: "wss://sepolia.infura.io/ws/v3/${INFURA_PROJECT_ID}"
+  contract_address: "0x..."
+  start_block: 0
+  chain_id: 11155111
+  reconnect_interval: 5s
+  max_retries: 3
+
+jwt:
+  secret: test-jwt-secret-key
+  expire_time: 24
+  issuer: go_auction
+
+log:
+  level: info

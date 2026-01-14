@@ -1,4 +1,4 @@
-package main
+package lesson
 
 import (
 	"log"
@@ -13,6 +13,7 @@ const (
 	contractAddr = "0x8D4141ec2b522dE5Cf42705C3010541B4B3EC24e"
 )
 
+// 加载已部署的合约
 func main() {
 	client, err := ethclient.Dial("https://sepolia.infura.io/v3/64820e5ca95c49c9b5022409694643ce")
 	if err != nil {

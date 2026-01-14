@@ -14,3 +14,11 @@ hardhat-project/.env
 /hardhat-auction/artifacts
 /hardhat-auction/cache
 /hardhat-auction/node_modules
+
+
+# 忽略根目录的.env文件
+.env
+# 忽略所有环境的.env文件（如.env.local/.env.prod/.env.test）
+.env.*
+# 例外：保留示例文件（供协作参考，需上传）
+!.env.example

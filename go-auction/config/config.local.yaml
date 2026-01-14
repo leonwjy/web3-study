@@ -1,0 +1,38 @@
+# 本地开发环境配置
+server:
+  port: 8080
+  mode: debug  # debug/release
+
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  dbname: auction_db
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: localhost
+  port: 6380  # Docker Redis 端口（避免与本地 Redis 6379 冲突）
+  password: ""
+  db: 0
+
+blockchain:
+  # 简化版：单节点配置
+  rpc_url: "https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}"
+  ws_url: "wss://sepolia.infura.io/ws/v3/${INFURA_PROJECT_ID}"
+  contract_address: "0x..."  # 部署后填写
+  start_block: 0              # 从哪个区块开始同步
+  chain_id: 11155111
+  # 简化配置
+  reconnect_interval: 5s      # 重连间隔（固定）
+  max_retries: 3              # 最大重试次数
+
+jwt:
+  secret: local-jwt-secret-key-change-in-production
+  expire_time: 24  # 小时
+  issuer: go_auction
+
+log:
+  level: debug

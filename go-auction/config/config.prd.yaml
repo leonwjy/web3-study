@@ -1,0 +1,36 @@
+# 生产环境配置
+server:
+  port: 8080
+  mode: release
+
+database:
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  username: ${DB_USER}
+  password: ${DB_PASSWORD}
+  dbname: ${DB_NAME}
+  max_idle_conns: 20
+  max_open_conns: 200
+
+redis:
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT}
+  password: ${REDIS_PASSWORD}
+  db: ${REDIS_DB}
+
+blockchain:
+  rpc_url: "https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}"
+  ws_url: "wss://sepolia.infura.io/ws/v3/${INFURA_PROJECT_ID}"
+  contract_address: ${BLOCKCHAIN_CONTRACT_ADDRESS}
+  start_block: ${BLOCKCHAIN_START_BLOCK}
+  chain_id: 11155111
+  reconnect_interval: 5s
+  max_retries: 5
+
+jwt:
+  secret: ${JWT_SECRET}
+  expire_time: 24
+  issuer: go_auction
+
+log:
+  level: warn

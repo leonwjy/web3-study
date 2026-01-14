@@ -1,0 +1,22 @@
+# 本地开发环境配置
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: localhost
+  port: 3306
+  username: blog_user
+  password: BlogPass123!
+  dbname: blog_db
+  max_idle_conns: 10
+  max_open_conns: 100
+
+jwt:
+  secret: local-jwt-secret-key-change-in-production
+  expire_time: 24  # 小时
+  issuer: go_blog
+
+log:
+  level: debug
+

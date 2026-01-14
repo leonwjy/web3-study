@@ -1,0 +1,22 @@
+# 生产环境配置
+server:
+  port: 8080
+  mode: release
+
+database:
+  host: prd-db-host
+  port: 3306
+  username: prd_user
+  password: prd_password
+  dbname: go_blog
+  max_idle_conns: 20
+  max_open_conns: 200
+
+jwt:
+  secret: production-jwt-secret-key-must-be-changed
+  expire_time: 72  # 小时
+  issuer: go_blog
+
+log:
+  level: warn
+
