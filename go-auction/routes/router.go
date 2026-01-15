@@ -2,6 +2,7 @@ package routes
 
 import (
 	"go-auction/controllers"
+	"go-auction/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -12,9 +13,15 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.New()
 
-	// 全局中间件
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	// 全局中间件（顺序重要）
+	r.Use(middleware.CORS())         // CORS必须在最前面
+	r.Use(middleware.ErrorHandler()) // 错误处理
+	r.Use(gin.Logger())              // 请求日志
+	r.Use(gin.Recovery())            // Panic恢复
+
+	// 健康检查（不需要认证）
+	healthCtrl := controllers.NewHealthController()
+	r.GET("/health", healthCtrl.HealthCheck)
 
 	// Swagger 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

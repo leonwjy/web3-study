@@ -20,9 +20,9 @@ redis:
 
 blockchain:
   # 简化版：单节点配置
-  rpc_url: "https://sepolia.infura.io/v3/${INFURA_PROJECT_ID}"
-  ws_url: "wss://sepolia.infura.io/ws/v3/${INFURA_PROJECT_ID}"
-  contract_address: "0x..."  # 部署后填写
+  rpc_url: "https://sepolia.infura.io/v3/64820e5ca95c49c9b5022409694643ce"
+  ws_url: "wss://sepolia.infura.io/ws/v3/64820e5ca95c49c9b5022409694643ce"
+  contract_address: "0xF8B2D1F1B114b88fD3E3B4d4B3Ab81aC6542eCf6"  # 部署后填写
   start_block: 0              # 从哪个区块开始同步
   chain_id: 11155111
   # 简化配置

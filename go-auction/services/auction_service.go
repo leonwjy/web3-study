@@ -1,12 +1,15 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"go-auction/dto"
 	"go-auction/models"
 	"go-auction/repositories"
+	"go-auction/utils"
 	"go-auction/vo"
 
 	"gorm.io/gorm"
@@ -30,6 +33,17 @@ func NewAuctionService() *AuctionService {
 
 // GetByID 根据ID获取拍卖详情
 func (s *AuctionService) GetByID(id uint64) (*vo.AuctionVO, error) {
+	ctx := context.Background()
+	cacheKey := utils.CacheKey("auction", id)
+
+	// 尝试从缓存获取
+	var auctionVO vo.AuctionVO
+	if err := utils.CacheGet(ctx, cacheKey, &auctionVO); err == nil {
+		slog.Debug("从缓存获取拍卖详情", "id", id)
+		return &auctionVO, nil
+	}
+
+	// 缓存未命中，从数据库查询
 	auction, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -39,7 +53,7 @@ func (s *AuctionService) GetByID(id uint64) (*vo.AuctionVO, error) {
 		return nil, err
 	}
 
-	auctionVO := vo.ToAuctionVO(auction)
+	auctionVO = *vo.ToAuctionVO(auction)
 
 	// 可选：加载关联的 NFT 信息
 	nft, err := s.nftRepo.GetByContractAndTokenID(auction.NFTContract, auction.TokenID)
@@ -47,7 +61,12 @@ func (s *AuctionService) GetByID(id uint64) (*vo.AuctionVO, error) {
 		auctionVO.NFT = vo.ToNFTVO(nft)
 	}
 
-	return auctionVO, nil
+	// 存入缓存（TTL: 5分钟）
+	if err := utils.CacheSet(ctx, cacheKey, auctionVO, 5*time.Minute); err != nil {
+		slog.Warn("缓存拍卖详情失败", "error", err, "id", id)
+	}
+
+	return &auctionVO, nil
 }
 
 // GetList 获取拍卖列表（支持状态、卖家、NFT合约过滤）
@@ -65,16 +84,35 @@ func (s *AuctionService) GetList(req *dto.AuctionListRequest) (*vo.AuctionListVO
 		pageSize = 100 // 最大100条
 	}
 
+	ctx := context.Background()
+	// 生成缓存键
+	cacheKey := utils.CacheKey("auctions", "list", page, pageSize, req.Status, req.Seller, req.NFTContract)
+
+	// 尝试从缓存获取
+	var listVO vo.AuctionListVO
+	if err := utils.CacheGet(ctx, cacheKey, &listVO); err == nil {
+		slog.Debug("从缓存获取拍卖列表", "page", page, "pageSize", pageSize)
+		return &listVO, nil
+	}
+
+	// 缓存未命中，从数据库查询
 	auctions, total, err := s.repo.GetList(page, pageSize, req.Status, req.Seller, req.NFTContract)
 	if err != nil {
 		slog.Error("获取拍卖列表失败", "error", err)
 		return nil, err
 	}
 
-	return &vo.AuctionListVO{
+	listVO = vo.AuctionListVO{
 		Total: total,
 		List:  vo.ToAuctionVOList(auctions),
-	}, nil
+	}
+
+	// 存入缓存（TTL: 1分钟）
+	if err := utils.CacheSet(ctx, cacheKey, listVO, 1*time.Minute); err != nil {
+		slog.Warn("缓存拍卖列表失败", "error", err)
+	}
+
+	return &listVO, nil
 }
 
 // GetActiveAuctions 获取活跃拍卖列表

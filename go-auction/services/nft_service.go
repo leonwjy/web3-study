@@ -1,11 +1,14 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"go-auction/dto"
 	"go-auction/repositories"
+	"go-auction/utils"
 	"go-auction/vo"
 
 	"gorm.io/gorm"
@@ -25,6 +28,17 @@ func NewNFTService() *NFTService {
 
 // GetByID 根据ID获取NFT
 func (s *NFTService) GetByID(id uint64) (*vo.NFTVO, error) {
+	ctx := context.Background()
+	cacheKey := utils.CacheKey("nft", id)
+
+	// 尝试从缓存获取
+	var nftVO vo.NFTVO
+	if err := utils.CacheGet(ctx, cacheKey, &nftVO); err == nil {
+		slog.Debug("从缓存获取NFT详情", "id", id)
+		return &nftVO, nil
+	}
+
+	// 缓存未命中，从数据库查询
 	nft, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -34,11 +48,29 @@ func (s *NFTService) GetByID(id uint64) (*vo.NFTVO, error) {
 		return nil, err
 	}
 
-	return vo.ToNFTVO(nft), nil
+	nftVO = *vo.ToNFTVO(nft)
+
+	// 存入缓存（TTL: 10分钟）
+	if err := utils.CacheSet(ctx, cacheKey, nftVO, 10*time.Minute); err != nil {
+		slog.Warn("缓存NFT详情失败", "error", err, "id", id)
+	}
+
+	return &nftVO, nil
 }
 
 // GetByContractAndTokenID 根据合约地址和TokenID获取NFT
 func (s *NFTService) GetByContractAndTokenID(contractAddress string, tokenID uint64) (*vo.NFTVO, error) {
+	ctx := context.Background()
+	cacheKey := utils.CacheKey("nft", contractAddress, tokenID)
+
+	// 尝试从缓存获取
+	var nftVO vo.NFTVO
+	if err := utils.CacheGet(ctx, cacheKey, &nftVO); err == nil {
+		slog.Debug("从缓存获取NFT详情", "contract", contractAddress, "token_id", tokenID)
+		return &nftVO, nil
+	}
+
+	// 缓存未命中，从数据库查询
 	nft, err := s.repo.GetByContractAndTokenID(contractAddress, tokenID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -48,7 +80,14 @@ func (s *NFTService) GetByContractAndTokenID(contractAddress string, tokenID uin
 		return nil, err
 	}
 
-	return vo.ToNFTVO(nft), nil
+	nftVO = *vo.ToNFTVO(nft)
+
+	// 存入缓存（TTL: 10分钟）
+	if err := utils.CacheSet(ctx, cacheKey, nftVO, 10*time.Minute); err != nil {
+		slog.Warn("缓存NFT详情失败", "error", err, "contract", contractAddress, "token_id", tokenID)
+	}
+
+	return &nftVO, nil
 }
 
 // GetByOwner 获取所有者的NFT列表

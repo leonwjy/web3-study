@@ -1,11 +1,14 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"go-auction/dto"
 	"go-auction/repositories"
+	"go-auction/utils"
 	"go-auction/vo"
 
 	"gorm.io/gorm"
@@ -101,6 +104,17 @@ func (s *BidService) GetHighestBid(auctionID uint64) (*vo.BidVO, error) {
 		return nil, ErrAuctionNotFound
 	}
 
+	ctx := context.Background()
+	cacheKey := utils.CacheKey("bid", "highest", auctionID)
+
+	// 尝试从缓存获取
+	var bidVO vo.BidVO
+	if err := utils.CacheGet(ctx, cacheKey, &bidVO); err == nil {
+		slog.Debug("从缓存获取最高出价", "auction_id", auctionID)
+		return &bidVO, nil
+	}
+
+	// 缓存未命中，从数据库查询
 	bid, err := s.repo.GetHighestBid(auctionID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -110,5 +124,12 @@ func (s *BidService) GetHighestBid(auctionID uint64) (*vo.BidVO, error) {
 		return nil, err
 	}
 
-	return vo.ToBidVO(bid), nil
+	bidVO = *vo.ToBidVO(bid)
+
+	// 存入缓存（TTL: 1分钟）
+	if err := utils.CacheSet(ctx, cacheKey, bidVO, 1*time.Minute); err != nil {
+		slog.Warn("缓存最高出价失败", "error", err, "auction_id", auctionID)
+	}
+
+	return &bidVO, nil
 }

@@ -79,3 +79,24 @@ func RedisExists(ctx context.Context, key string) (bool, error) {
 	count, err := RedisClient.Exists(ctx, key).Result()
 	return count > 0, err
 }
+
+// RedisDeletePattern 根据模式删除多个key（使用SCAN命令）
+func RedisDeletePattern(ctx context.Context, pattern string) error {
+	if RedisClient == nil {
+		return nil
+	}
+
+	iter := RedisClient.Scan(ctx, 0, pattern, 0).Iterator()
+	var keys []string
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+
+	if len(keys) > 0 {
+		return RedisClient.Del(ctx, keys...).Err()
+	}
+	return nil
+}

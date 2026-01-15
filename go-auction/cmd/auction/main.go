@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"go-auction/blockchain"
 	"go-auction/config"
+	"go-auction/repositories"
 	"go-auction/routes"
 
 	_ "go-auction/docs" // 导入 Swagger 文档
@@ -38,7 +40,11 @@ func main() {
 
 	// 加载配置
 	cfg := config.Load()
-	slog.Info("配置加载成功", "env", cfg.Env)
+	env := os.Getenv("GO_ENV")
+	if env == "" {
+		env = "local"
+	}
+	slog.Info("配置加载成功", "env", env)
 
 	// 初始化数据库
 	config.InitDatabase(cfg)
@@ -50,24 +56,65 @@ func main() {
 	defer config.CloseRedis()
 	slog.Info("Redis初始化成功")
 
+	// 初始化区块链客户端和事件监听器（如果配置了合约地址）
+	var eventListener *blockchain.EventListener
+	if cfg.Blockchain.ContractAddress != "" && cfg.Blockchain.ContractAddress != "0x..." {
+		bcClient, err := blockchain.NewClient(&cfg.Blockchain)
+		if err != nil {
+			slog.Error("区块链客户端初始化失败", "error", err)
+		} else {
+			defer bcClient.Close()
+			slog.Info("区块链客户端初始化成功")
+
+			// 创建 Repository 实例
+			syncRepo := repositories.NewSyncStatusRepository()
+			auctionRepo := repositories.NewAuctionRepository()
+			bidRepo := repositories.NewBidRepository()
+			nftRepo := repositories.NewNFTRepository()
+
+			// 创建事件监听器
+			eventListener, err = blockchain.NewEventListener(
+				bcClient,
+				syncRepo,
+				auctionRepo,
+				bidRepo,
+				nftRepo,
+				cfg.Blockchain.StartBlock,
+			)
+			if err != nil {
+				slog.Error("事件监听器创建失败", "error", err)
+			} else {
+				// 启动事件监听（在后台 goroutine）
+				go func() {
+					if err := eventListener.Start(context.Background()); err != nil {
+						slog.Error("事件监听器启动失败", "error", err)
+					}
+				}()
+				slog.Info("事件监听器启动成功")
+			}
+		}
+	} else {
+		slog.Warn("未配置合约地址，跳过区块链事件监听")
+	}
+
 	// 设置路由
 	router := routes.SetupRouter()
 	slog.Info("路由配置完成")
 
 	// 启动HTTP服务器
 	port := cfg.Server.Port
-	if port == "" {
-		port = "8080"
+	if port == 0 {
+		port = 8080
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: router,
 	}
 
 	// 在goroutine中启动服务器
 	go func() {
-		slog.Info("HTTP服务器启动", "port", port, "swagger", fmt.Sprintf("http://localhost:%s/swagger/index.html", port))
+		slog.Info("HTTP服务器启动", "port", port, "swagger", fmt.Sprintf("http://localhost:%d/swagger/index.html", port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("HTTP服务器启动失败", "error", err)
 			os.Exit(1)
@@ -80,6 +127,12 @@ func main() {
 	<-quit
 
 	slog.Info("正在关闭服务器...")
+
+	// 停止事件监听器
+	if eventListener != nil {
+		eventListener.Stop()
+		slog.Info("事件监听器已停止")
+	}
 
 	// 设置5秒超时上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

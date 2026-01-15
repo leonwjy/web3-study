@@ -333,9 +333,10 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - **账户 2（卖家）**：接收 NFT，创建拍卖，结束拍卖
    - **账户 3+（买家）**：参与出价竞价
 
-   1：0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
-   2：0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
-   3：0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+   1：0x36c4204DEEe1d4D44dAaB03f9052DB8F147b121F  leon-t-251203
+   2：0xBb03D7e8380a60665710582E42668cFceF85f457  leon
+   3：0xD763Fca24A1dfc20c248F71f1964827e30c23331  leon-t-251202
+   4: 0x3a7f80ba12613A837BCffc02d8C77c3d1Ac3E325  leon-t-260115
 
 3. **账户切换：**
    - 在每个操作前，确认使用正确的账户
@@ -397,11 +398,16 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - 参数：`"MyNFT"`, `"MNFT"`
    - 记录部署地址：`myNFTAddress`
    - 0xDA0bab807633f07f013f94DD0E6A4F96F8742B53
+
+   - 0x3c5310EaaECa701b316e6f62F25F11d5096d21d3  Sepolia
+   - tx hash 0x131de774f002d11bcffdc8047138ec0cc6ca0a83bf2d6cf78492cb661d1aedc4
    - **铸造 NFT：** 使用账户 1（部署者）- 因为 MyNFT 的 onlyOwner 限制
      - 保持使用账户 1（当前部署者账户）
      - 调用 `mint(账户2地址, "https://example.com/token/1")` 铸造 NFT 给卖家账户
+     - https://ibb.co/wFd70sb4
      - 记录铸造的 tokenId（通常是 1）
      - **注意：** 虽然铸造给账户 2，但铸造动作必须由合约所有者（账户 1）执行
+     - tx hash : 0x6c0f620b21956f28fb4114e8e174a25d85a190380066489964e61710af392280
      - 1
 
 6. **部署 Auction 合约**
@@ -422,6 +428,8 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
    - 部署成功后，调用 `initialize(priceOracleAddress)` 初始化
    - 记录部署地址：`auctionAddress`
    - 0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99
+   - 0xF8B2D1F1B114b88fD3E3B4d4B3Ab81aC6542eCf6 sepolia 
+   - tx hash 0x88d47de994a49e830bfde3e6403845e41abe054ef5f63de7dd9978357889a54d
 
 ### 3.4 部署故障排除
 

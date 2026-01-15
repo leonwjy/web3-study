@@ -6,7 +6,7 @@ import (
 
 	"go-auction/dto"
 	"go-auction/services"
-	"go-auction/utils/response"
+	"go-auction/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,21 +37,21 @@ func NewNFTController() *NFTController {
 func (c *NFTController) GetByID(ctx *gin.Context) {
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(ctx, "无效的NFT ID")
+		utils.BadRequest(ctx, "无效的NFT ID")
 		return
 	}
 
 	nftVO, err := c.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, services.ErrNFTNotFound) {
-			response.NotFound(ctx, err.Error())
+			utils.NotFound(ctx, err.Error())
 		} else {
-			response.InternalError(ctx, "获取NFT失败")
+			utils.InternalError(ctx, "获取NFT失败")
 		}
 		return
 	}
 
-	response.Success(ctx, nftVO)
+	utils.Success(ctx, nftVO)
 }
 
 // GetByContractAndTokenID 根据合约和TokenID获取NFT
@@ -69,21 +69,21 @@ func (c *NFTController) GetByID(ctx *gin.Context) {
 func (c *NFTController) GetByContractAndTokenID(ctx *gin.Context) {
 	var req dto.NFTByContractRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(ctx, "参数验证失败: "+err.Error())
+		utils.BadRequest(ctx, "参数验证失败: "+err.Error())
 		return
 	}
 
 	nftVO, err := c.service.GetByContractAndTokenID(req.ContractAddress, req.TokenID)
 	if err != nil {
 		if errors.Is(err, services.ErrNFTNotFound) {
-			response.NotFound(ctx, err.Error())
+			utils.NotFound(ctx, err.Error())
 		} else {
-			response.InternalError(ctx, "获取NFT失败")
+			utils.InternalError(ctx, "获取NFT失败")
 		}
 		return
 	}
 
-	response.Success(ctx, nftVO)
+	utils.Success(ctx, nftVO)
 }
 
 // GetByOwner 获取所有者的NFT列表
@@ -101,20 +101,20 @@ func (c *NFTController) GetByContractAndTokenID(ctx *gin.Context) {
 func (c *NFTController) GetByOwner(ctx *gin.Context) {
 	var req dto.NFTListRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(ctx, "参数验证失败: "+err.Error())
+		utils.BadRequest(ctx, "参数验证失败: "+err.Error())
 		return
 	}
 
 	if req.Owner == "" {
-		response.BadRequest(ctx, "所有者地址不能为空")
+		utils.BadRequest(ctx, "所有者地址不能为空")
 		return
 	}
 
 	listVO, err := c.service.GetByOwner(req.Owner, &req)
 	if err != nil {
-		response.InternalError(ctx, "获取NFT列表失败")
+		utils.InternalError(ctx, "获取NFT列表失败")
 		return
 	}
 
-	response.Success(ctx, listVO)
+	utils.Success(ctx, listVO)
 }

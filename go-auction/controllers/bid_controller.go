@@ -6,7 +6,7 @@ import (
 
 	"go-auction/dto"
 	"go-auction/services"
-	"go-auction/utils/response"
+	"go-auction/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,13 +39,13 @@ func NewBidController() *BidController {
 func (c *BidController) GetByAuctionID(ctx *gin.Context) {
 	auctionID, err := strconv.ParseUint(ctx.Param("auction_id"), 10, 64)
 	if err != nil {
-		response.BadRequest(ctx, "无效的拍卖ID")
+		utils.BadRequest(ctx, "无效的拍卖ID")
 		return
 	}
 
 	var req dto.BidListRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(ctx, "参数验证失败: "+err.Error())
+		utils.BadRequest(ctx, "参数验证失败: "+err.Error())
 		return
 	}
 
@@ -53,14 +53,14 @@ func (c *BidController) GetByAuctionID(ctx *gin.Context) {
 	listVO, err := c.service.GetByAuctionID(auctionID, &req)
 	if err != nil {
 		if errors.Is(err, services.ErrAuctionNotFound) {
-			response.NotFound(ctx, err.Error())
+			utils.NotFound(ctx, err.Error())
 		} else {
-			response.InternalError(ctx, "获取出价列表失败")
+			utils.InternalError(ctx, "获取出价列表失败")
 		}
 		return
 	}
 
-	response.Success(ctx, listVO)
+	utils.Success(ctx, listVO)
 }
 
 // GetByBidder 获取出价者的出价历史
@@ -78,24 +78,24 @@ func (c *BidController) GetByAuctionID(ctx *gin.Context) {
 func (c *BidController) GetByBidder(ctx *gin.Context) {
 	bidder := ctx.Param("bidder")
 	if bidder == "" {
-		response.BadRequest(ctx, "出价者地址不能为空")
+		utils.BadRequest(ctx, "出价者地址不能为空")
 		return
 	}
 
 	var req dto.BidHistoryRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(ctx, "参数验证失败: "+err.Error())
+		utils.BadRequest(ctx, "参数验证失败: "+err.Error())
 		return
 	}
 
 	req.Bidder = bidder
 	listVO, err := c.service.GetByBidder(bidder, &req)
 	if err != nil {
-		response.InternalError(ctx, "获取出价历史失败")
+		utils.InternalError(ctx, "获取出价历史失败")
 		return
 	}
 
-	response.Success(ctx, listVO)
+	utils.Success(ctx, listVO)
 }
 
 // GetHighestBid 获取拍卖的最高出价
@@ -112,21 +112,21 @@ func (c *BidController) GetByBidder(ctx *gin.Context) {
 func (c *BidController) GetHighestBid(ctx *gin.Context) {
 	auctionID, err := strconv.ParseUint(ctx.Param("auction_id"), 10, 64)
 	if err != nil {
-		response.BadRequest(ctx, "无效的拍卖ID")
+		utils.BadRequest(ctx, "无效的拍卖ID")
 		return
 	}
 
 	bidVO, err := c.service.GetHighestBid(auctionID)
 	if err != nil {
 		if errors.Is(err, services.ErrAuctionNotFound) {
-			response.NotFound(ctx, err.Error())
+			utils.NotFound(ctx, err.Error())
 		} else if errors.Is(err, services.ErrBidNotFound) {
-			response.NotFound(ctx, err.Error())
+			utils.NotFound(ctx, err.Error())
 		} else {
-			response.InternalError(ctx, "获取最高出价失败")
+			utils.InternalError(ctx, "获取最高出价失败")
 		}
 		return
 	}
 
-	response.Success(ctx, bidVO)
+	utils.Success(ctx, bidVO)
 }
