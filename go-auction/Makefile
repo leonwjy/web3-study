@@ -101,4 +101,12 @@ dev: docker-up run ## 开发模式：启动Docker并运行应用
 
 setup: mod-download install-tools docker-up ## 初始化开发环境
 
+sync-metadata: ## 同步NFT元数据（历史数据）
+	@echo "$(GREEN)同步NFT元数据...$(NC)"
+	@go run ./cmd/sync-nft-metadata
+
+sync-metadata-dry: ## 同步NFT元数据（仅显示，不更新）
+	@echo "$(GREEN)同步NFT元数据（Dry Run）...$(NC)"
+	@go run ./cmd/sync-nft-metadata -dry-run
+
 all: clean build test ## 执行完整构建流程

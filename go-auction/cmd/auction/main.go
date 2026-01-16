@@ -80,6 +80,7 @@ func main() {
 				bidRepo,
 				nftRepo,
 				cfg.Blockchain.StartBlock,
+				&cfg.Blockchain.NFTMetadata,
 			)
 			if err != nil {
 				slog.Error("事件监听器创建失败", "error", err)

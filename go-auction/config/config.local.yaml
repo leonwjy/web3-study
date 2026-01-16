@@ -28,6 +28,13 @@ blockchain:
   # 简化配置
   reconnect_interval: 5s      # 重连间隔（固定）
   max_retries: 3              # 最大重试次数
+  # NFT 元数据配置
+  nft_metadata:
+    ipfs_gateway: "https://ipfs.io/ipfs"      # IPFS 网关地址
+    arweave_gateway: "https://arweave.net"    # Arweave 网关地址
+    http_timeout: 10s                          # HTTP 请求超时时间
+    update_timeout: 30s                        # 元数据更新超时时间
+    user_agent: "NFT-Metadata-Fetcher/1.0"     # HTTP User-Agent
 
 jwt:
   secret: local-jwt-secret-key-change-in-production

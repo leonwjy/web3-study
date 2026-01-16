@@ -4,6 +4,7 @@ import (
 	"go-auction/config"
 	"go-auction/models"
 
+	"errors"
 	"gorm.io/gorm"
 )
 
@@ -43,11 +44,16 @@ func (r *NFTRepository) Delete(id uint64) error {
 }
 
 // GetByContractAndTokenID 根据合约地址和TokenID获取NFT（唯一查询）
+// 如果记录不存在，返回 (nil, nil) 而不是错误
 func (r *NFTRepository) GetByContractAndTokenID(contractAddress string, tokenID uint64) (*models.NFT, error) {
 	var nft models.NFT
 	err := r.db.Where("contract_address = ? AND token_id = ?", contractAddress, tokenID).
 		First(&nft).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 记录不存在是正常情况，返回 nil 而不是错误
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &nft, nil
@@ -92,4 +98,15 @@ func (r *NFTRepository) Exists(contractAddress string, tokenID uint64) (bool, er
 		Where("contract_address = ? AND token_id = ?", contractAddress, tokenID).
 		Count(&count).Error
 	return count > 0, err
+}
+
+// GetNFTsWithoutMetadata 获取缺少元数据的NFT列表（image_url 或 description 为空）
+func (r *NFTRepository) GetNFTsWithoutMetadata() ([]*models.NFT, error) {
+	var nfts []*models.NFT
+	err := r.db.Where("image_url = '' OR description = '' OR name = '' OR name LIKE 'NFT #%'").
+		Find(&nfts).Error
+	if err != nil {
+		return nil, err
+	}
+	return nfts, nil
 }

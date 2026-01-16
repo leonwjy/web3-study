@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"go-auction/config"
 	"go-auction/repositories"
 
 	"github.com/ethereum/go-ethereum"
@@ -45,6 +46,7 @@ func NewEventListener(
 	bidRepo *repositories.BidRepository,
 	nftRepo *repositories.NFTRepository,
 	startBlock uint64,
+	nftMetadataConfig *config.NFTMetadataConfig,
 ) (*EventListener, error) {
 	// 创建合约实例
 	contractInstance, err := contract.NewAuction(client.GetContractAddress(), client.GetRPCClient())
@@ -53,7 +55,7 @@ func NewEventListener(
 	}
 
 	// 创建事件处理器
-	handler := NewEventHandler(auctionRepo, bidRepo, nftRepo, syncRepo, client.GetContractAddress())
+	handler := NewEventHandler(auctionRepo, bidRepo, nftRepo, syncRepo, client, client.GetContractAddress(), nftMetadataConfig)
 
 	// 创建Worker Pool事件处理器
 	processor := NewEventProcessor(handler, contractInstance, 5) // 默认5个worker

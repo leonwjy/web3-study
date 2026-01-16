@@ -581,6 +581,7 @@ contract Auction is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeabl
      - 调用 `myNFT.approve(auctionAddress, 1)` 授权拍卖合约
      - 验证授权：调用 `myNFT.getApproved(1)` 确认返回 auctionAddress
      - 0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99
+     - 0xF8B2D1F1B114b88fD3E3B4d4B3Ab81aC6542eCf6 sepolia 
 
 2. **创建拍卖：**
    - **在 Remix 中的输入参数：**

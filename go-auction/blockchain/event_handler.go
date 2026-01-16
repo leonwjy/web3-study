@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"go-auction/config"
 	"go-auction/models"
 	"go-auction/repositories"
 	"go-auction/utils"
@@ -20,12 +21,13 @@ import (
 
 // EventHandler 事件处理器
 type EventHandler struct {
-	auctionRepo  *repositories.AuctionRepository
-	bidRepo      *repositories.BidRepository
-	nftRepo      *repositories.NFTRepository
-	syncRepo     *repositories.SyncStatusRepository
-	contractAddr common.Address
-	retryConfig  RetryConfig
+	auctionRepo    *repositories.AuctionRepository
+	bidRepo        *repositories.BidRepository
+	nftRepo        *repositories.NFTRepository
+	syncRepo       *repositories.SyncStatusRepository
+	metadataService *NFTMetadataService
+	contractAddr   common.Address
+	retryConfig    RetryConfig
 }
 
 // NewEventHandler 创建事件处理器
@@ -34,15 +36,19 @@ func NewEventHandler(
 	bidRepo *repositories.BidRepository,
 	nftRepo *repositories.NFTRepository,
 	syncRepo *repositories.SyncStatusRepository,
+	client *Client,
 	contractAddr common.Address,
+	cfg *config.NFTMetadataConfig,
 ) *EventHandler {
+	metadataService := NewNFTMetadataService(client.GetRPCClient(), cfg)
 	return &EventHandler{
-		auctionRepo:  auctionRepo,
-		bidRepo:      bidRepo,
-		nftRepo:      nftRepo,
-		syncRepo:     syncRepo,
-		contractAddr: contractAddr,
-		retryConfig:  DefaultRetryConfig,
+		auctionRepo:     auctionRepo,
+		bidRepo:         bidRepo,
+		nftRepo:         nftRepo,
+		syncRepo:        syncRepo,
+		metadataService: metadataService,
+		contractAddr:    contractAddr,
+		retryConfig:     DefaultRetryConfig,
 	}
 }
 
@@ -81,16 +87,30 @@ func (h *EventHandler) HandleAuctionCreated(event *contract.AuctionAuctionCreate
 	}
 
 	existingNFT, err := h.nftRepo.GetByContractAndTokenID(nft.ContractAddress, nft.TokenID)
-	if err == nil && existingNFT != nil {
+	if err != nil {
+		// 数据库查询错误（非 record not found）
+		slog.Warn("failed to query NFT", "error", err, "contract", nft.ContractAddress, "token_id", nft.TokenID)
+	} else if existingNFT != nil {
 		// NFT 已存在，更新所有者
 		existingNFT.Owner = nft.Owner
 		if err := h.nftRepo.Update(existingNFT); err != nil {
 			slog.Warn("failed to update NFT", "error", err, "nft_id", existingNFT.ID)
 		}
+		// 如果元数据为空，异步获取并更新
+		if existingNFT.ImageURL == "" || existingNFT.Description == "" {
+			nftRepoAdapter := &nftRepositoryAdapter{repo: *h.nftRepo}
+			h.metadataService.UpdateNFTMetadata(context.Background(), nftRepoAdapter, nft.ContractAddress, nft.TokenID)
+		}
 	} else {
-		// 创建新 NFT
+		// NFT 不存在，创建新记录
+		// 注意：ImageURL 和 Description 为空是正常的，因为链上事件不包含元数据
+		// 异步获取元数据并更新
 		if err := h.nftRepo.Create(nft); err != nil {
 			slog.Warn("failed to create NFT", "error", err)
+		} else {
+			// 异步获取并更新 NFT 元数据
+			nftRepoAdapter := &nftRepositoryAdapter{repo: *h.nftRepo}
+			h.metadataService.UpdateNFTMetadata(context.Background(), nftRepoAdapter, nft.ContractAddress, nft.TokenID)
 		}
 	}
 

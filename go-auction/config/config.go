@@ -54,6 +54,16 @@ type BlockchainConfig struct {
 	ChainID           uint64        `mapstructure:"chain_id"`
 	ReconnectInterval time.Duration `mapstructure:"reconnect_interval"`
 	MaxRetries        int           `mapstructure:"max_retries"`
+	NFTMetadata       NFTMetadataConfig `mapstructure:"nft_metadata"`
+}
+
+// NFTMetadataConfig NFT 元数据配置
+type NFTMetadataConfig struct {
+	IPFSGateway      string        `mapstructure:"ipfs_gateway"`       // IPFS 网关地址
+	ArweaveGateway   string        `mapstructure:"arweave_gateway"`   // Arweave 网关地址
+	HTTPTimeout      time.Duration `mapstructure:"http_timeout"`     // HTTP 请求超时时间
+	UpdateTimeout    time.Duration `mapstructure:"update_timeout"`   // 元数据更新超时时间
+	UserAgent        string        `mapstructure:"user_agent"`       // HTTP User-Agent
 }
 
 // JWTConfig JWT配置

@@ -26,6 +26,13 @@ blockchain:
   chain_id: 11155111
   reconnect_interval: 5s
   max_retries: 5
+  # NFT 元数据配置
+  nft_metadata:
+    ipfs_gateway: ${NFT_METADATA_IPFS_GATEWAY:-https://ipfs.io/ipfs}
+    arweave_gateway: ${NFT_METADATA_ARWEAVE_GATEWAY:-https://arweave.net}
+    http_timeout: ${NFT_METADATA_HTTP_TIMEOUT:-10s}
+    update_timeout: ${NFT_METADATA_UPDATE_TIMEOUT:-30s}
+    user_agent: ${NFT_METADATA_USER_AGENT:-NFT-Metadata-Fetcher/1.0}
 
 jwt:
   secret: ${JWT_SECRET}
