@@ -22,3 +22,5 @@ hardhat-project/.env
 .env.*
 # 例外：保留示例文件（供协作参考，需上传）
 !.env.example
+
+advanced2-contract-stake/stake-contract/.DS_Store
