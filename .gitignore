@@ -15,6 +15,10 @@ hardhat-project/.env
 /hardhat-auction/cache
 /hardhat-auction/node_modules
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 
 # 忽略根目录的.env文件
 .env
