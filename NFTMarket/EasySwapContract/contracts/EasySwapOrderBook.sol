@@ -115,10 +115,8 @@ contract EasySwapOrderBook is
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable state-variable-assignment
-    /**
-     * @notice 合约自身地址，用于delegatecall检查
-     */
+    /// @notice 合约自身地址，用于delegatecall检查
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address private immutable self = address(this);
 
     /**

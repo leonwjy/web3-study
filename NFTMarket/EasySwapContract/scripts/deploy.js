@@ -26,7 +26,14 @@ async function main() {
   EIP712Name = "EasySwapOrderBook";
   EIP712Version = "1";
   let esDex = await ethers.getContractFactory("EasySwapOrderBook")
-  esDex = await upgrades.deployProxy(esDex, [newProtocolShare, newESVault, EIP712Name, EIP712Version], { initializer: 'initialize' });
+  esDex = await upgrades.deployProxy(
+    esDex,
+    [newProtocolShare, newESVault, EIP712Name, EIP712Version],
+    {
+      initializer: 'initialize',
+      unsafeAllow: ['state-variable-immutable'],
+    }
+  );
   await esDex.deployed()
   console.log("esDex contract deployed to:", esDex.address)
   console.log(await upgrades.erc1967.getImplementationAddress(esDex.address), " esDex getImplementationAddress")
