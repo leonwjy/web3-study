@@ -8,6 +8,39 @@ scope: main
 
 本规范用于主项目的统一约束，适用于所有 Web3 相关代码与文档产出。强调 **安全优先、最小权限、零冗余、强业务对齐、可审计**。当模块内有更严格规范时，以更严格者为准。
 
+## 0. 规范源自动加载（强制）
+为便于跨项目复用，本节作为“可复制模板”固定放在文件开头。新项目只需复制本节，再补充项目特有规范。
+
+### 0.1 默认加载源
+- 主规范：`AGENTS.md`（本文件，始终生效）。
+- Cursor 规则：`.cursor/rules/*.mdc`（按规则声明执行，`alwaysApply: true` 视为全局强制）。
+- Cursor Skills：`.cursor/skills/**/SKILL.md`（按任务匹配自动启用；用户显式点名时必须启用）。
+- Cursor Comment/Command/Agent 约束（若存在）：
+  - `.cursor/comments/**/*`
+  - `.cursor/commands/**/*`
+  - `.cursor/agents/**/*`
+  以上作为补充规范源，涉及代码风格、审查清单、交付格式时应同时遵循。
+
+### 0.2 Claude/Gemini 兼容加载
+若仓库中存在以下文件，视为可自动兼容的补充规范源，无需额外人工声明：
+- `CLAUDE.md`、`CLAUDE.local.md`、`.claude/**/*.md`
+- `GEMINI.md`、`GEMINI.local.md`、`.gemini/**/*.md`
+- `.cursorrules`（若存在）
+
+### 0.3 冲突处理优先级
+当多规范冲突时，按以下顺序执行（高 -> 低）：
+1. 安全与合规红线（任何来源中的更严格条款）
+2. 本文件 `AGENTS.md`
+3. `.cursor/rules/*.mdc`
+4. `.cursor/skills/**/SKILL.md`
+5. `CLAUDE* / GEMINI* / .claude / .gemini / .cursorrules`
+6. 其他辅助文档（`.cursor/comments`、`.cursor/commands`、`.cursor/agents`）
+
+### 0.4 执行约束
+- 未读取到某规范文件时，不阻塞执行；但需在输出中明确“未发现对应文件，已按可用规范执行”。
+- 对同一任务，若多份规范可用，必须选择“更严格且更贴近任务域”的规则集合。
+- 新增或更新规范文件后，下一次会话默认按最新版本执行。
+
 ## 1. 总体原则
 - 安全优先：默认防御性编程，零容忍已知漏洞。
 - 最小权限：进程、函数、合约、配置与密钥访问均最小化。
